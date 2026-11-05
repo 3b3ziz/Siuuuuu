@@ -62,3 +62,8 @@ __pycache__/
 venv/
 env/
 .DS_Store
+
+# -- team: personal files ----------------------------------------------------------------------
+# Your own instructions for Claude in this project. Shared ones go in CLAUDE.md.
+CLAUDE.local.md
+.claude/settings.local.json
