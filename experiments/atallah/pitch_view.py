@@ -14,8 +14,8 @@ Terms: the output contains tracking data from the gated bundle. It goes to data/
 git ignores. Do not commit it, share it or upload it anywhere.
 
     pip install -r requirements-starter.txt     # needs kloppy
-    uv run --with numpy --with pandas --with kloppy python experiments/ahmed/pitch_view.py
-    uv run --with numpy --with pandas --with kloppy python experiments/ahmed/pitch_view.py \\
+    uv run --with numpy --with pandas --with kloppy python experiments/atallah/pitch_view.py
+    uv run --with numpy --with pandas --with kloppy python experiments/atallah/pitch_view.py \\
         --start 12000 --seconds 8 --labels evaluation/gt/BAR-ATH_possession_gt_public.csv
 """
 
@@ -25,7 +25,7 @@ import os
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-ROOT = os.path.dirname(os.path.dirname(HERE))   # experiments/ahmed -> repo root
+ROOT = os.path.dirname(os.path.dirname(HERE))   # experiments/atallah -> repo root
 sys.path.insert(0, HERE)
 sys.path.insert(0, ROOT)
 sys.path.insert(0, os.path.join(ROOT, "starter"))

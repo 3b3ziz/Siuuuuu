@@ -11,8 +11,8 @@ For the frames where the ground truth is graded (not X), the page shows:
               chosen IoU pass mark and drawn hollow if they are invented
 
 Usage:
-    python experiments/ahmed/plot_possessions.py my_submission.csv              # public 5 minutes
-    python experiments/ahmed/plot_possessions.py my_submission.csv --gt path/to/gt.csv --out view.html
+    python experiments/atallah/plot_possessions.py my_submission.csv              # public 5 minutes
+    python experiments/atallah/plot_possessions.py my_submission.csv --gt path/to/gt.csv --out view.html
 
 The default output is data/views/possession_view.html, which git ignores.
 """
@@ -26,7 +26,7 @@ import sys
 import numpy as np
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-ROOT = os.path.dirname(os.path.dirname(HERE))   # experiments/ahmed -> repo root
+ROOT = os.path.dirname(os.path.dirname(HERE))   # experiments/atallah -> repo root
 sys.path.insert(0, os.path.join(ROOT, "evaluation"))
 import possession_metrics as pm  # noqa: E402  (organisers' scorer, untouched)
 
