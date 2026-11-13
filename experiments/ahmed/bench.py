@@ -59,16 +59,9 @@ def load_games():
         gt = pd.read_csv(os.path.join(SAMPLE, "sample_gt.csv"))["label"].to_numpy()
         pickle.dump((df, players_by_team(ds), gt, (105.0, 68.0)), open(path, "wb"))
     games["metrica3"] = pickle.load(open(path, "rb"))
-    from bundesliga import answer_key, load
+    from bundesliga_data import games as bundesliga_games
 
-    for raw in sorted(glob.glob(os.path.join(ROOT, "data", "bundesliga", "DFL_04_*.xml"))):
-        m = raw.split("DFL-MAT-")[1][:-4]
-        path = os.path.join(CACHE, "bl_{}.pkl".format(m))
-        if not os.path.exists(path):
-            ds, df, pitch = load(m)
-            teams = [[p for p in t if p + "_x" in df.columns] for t in players_by_team(ds)]
-            pickle.dump((df, teams, answer_key(ds, df), pitch), open(path, "wb"))
-        games["bl_" + m] = pickle.load(open(path, "rb"))
+    games.update(bundesliga_games())
     return games
 
 

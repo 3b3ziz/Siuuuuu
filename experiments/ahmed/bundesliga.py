@@ -31,26 +31,7 @@ from sticky import period_segments, players_by_team, sticky_labels  # noqa: E402
 from stoppage import dead_from_players  # noqa: E402
 from stop_fixes import dead_before_restart, drop_short  # noqa: E402
 
-DATA = os.path.join(ROOT, "data", "bundesliga")
-
-
-def load(match):
-    from kloppy import sportec
-
-    raw = glob.glob(os.path.join(DATA, "DFL_04_03_positions_raw_observed_*{}.xml".format(match)))[0]
-    meta = glob.glob(os.path.join(DATA, "DFL_02_01_matchinformation_*{}.xml".format(match)))[0]
-    ds = sportec.load_tracking(raw_data=raw, meta_data=meta, coordinates="kloppy", only_alive=False)
-    df = ds.to_df()
-    # one row per frame within each period, no gaps
-    pitch = (ds.metadata.pitch_dimensions.pitch_length, ds.metadata.pitch_dimensions.pitch_width)
-    return ds, df.reset_index(drop=True), pitch
-
-
-def answer_key(ds, df):
-    home = ds.metadata.teams[0].team_id
-    owner = df["ball_owning_team_id"].astype(str).to_numpy()
-    alive = (df["ball_state"].astype(str).str.lower().str.contains("alive")).to_numpy()
-    return np.where(~alive, "D", np.where(owner == str(home), "H", "A"))
+from bundesliga_data import DATA, answer_key, load  # noqa: E402,F401
 
 
 def approaches(frame, teams, segments, pitch):

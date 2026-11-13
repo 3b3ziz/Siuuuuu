@@ -22,10 +22,10 @@ For every frame of one LaLiga match (Barça vs Athletic, 25 frames a second), la
 ```
 uv venv --python 3.12
 source .venv/bin/activate
-uv pip install -r requirements.txt -r requirements-starter.txt
+uv pip install -r requirements.txt -r requirements-starter.txt -r requirements-team.txt
 ```
 
-Unzip the match data into `data/`. The practice match (Metrica's public Sample Game 3) goes in `data/sample/`, from https://github.com/metrica-sports/sample-data/tree/master/data/Sample_Game_3
+Unzip the match data into `data/`. The 7 Bundesliga games (training data for `prep/shape_model.py`) go in `data/bundesliga/`, from https://huggingface.co/datasets/pysport/idsse-data The practice match (Metrica's public Sample Game 3) goes in `data/sample/`, from https://github.com/metrica-sports/sample-data/tree/master/data/Sample_Game_3
 
 ## Commands
 
