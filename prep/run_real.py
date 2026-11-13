@@ -1,4 +1,4 @@
-"""Our current best approach (row 13 in docs/notes.md) on the real match: data in, submission out.
+"""Our current best approach (row 14 in docs/notes.md) on the real match: data in, submission out.
 
     python prep/run_real.py                 # writes evaluation/results/<name>.csv, checks, scores
     python prep/run_real.py --name try2     # pick the file name
@@ -13,7 +13,8 @@ Steps:
      kickoff, before each half's kickoff, and frames with under 10 players tracked.
      Team: sticky possession ("closest" rule, prep/sticky.py); the team taking a tagged set piece
      gets the first bit after it. Inside ball-missing stretches, a players-only model trained on 7
-     Bundesliga games (prep/shape_model.py) places the switch, or a hidden spell by the other team;
+     Bundesliga games (prep/shape_model.py) places the switch, or a hidden spell by the other team.
+     With the ball visible, it can overrule us where nobody is clearly on the ball;
      possessions under 1 s go to the team before (prep/team_fixes.py).
   3. X before kickoff, at halftime and after the final whistle (never graded).
   4. Run the official validator, then score against the public 5 minutes. That score is a
@@ -37,7 +38,7 @@ from baseline import write_submission  # noqa: E402
 from stoppage import dead_from_players  # noqa: E402
 from sticky import players_by_team, runs, sticky_labels  # noqa: E402
 from shape_model import features, p_home, trained_model  # noqa: E402
-from team_fixes import merge_short, shape_gap  # noqa: E402
+from team_fixes import merge_short, model_override, on_ball, shape_gap  # noqa: E402
 from stop_fixes import dead_before_restart, drop_short  # noqa: E402
 from tags import (QUIET_AFTER_RESTART, dead_after_goals, dead_at_edges, dead_from_restarts,  # noqa: E402
                   restart_team, tag_inputs)
@@ -68,7 +69,8 @@ def predict(ds, df, segments, pitch):
     labels = sticky_labels(df, teams, segments, "closest", dead=dead, pitch=pitch)
     labels = restart_team(labels, rframes, restart_teams)
     p = p_home(trained_model(), *features(df, teams, segments, pitch))
-    labels = merge_short(shape_gap(labels, df["ball_x"].notna().to_numpy(), p))
+    labels = shape_gap(labels, df["ball_x"].notna().to_numpy(), p)
+    labels = merge_short(model_override(labels, p, near=on_ball(df, teams, pitch)))
     graded = np.zeros(len(labels), dtype=bool)
     for a, b in segments:
         graded[a:b] = True
@@ -90,7 +92,7 @@ def ballpark(labels, segments):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--name", default="ours_row13")
+    parser.add_argument("--name", default="ours_row14")
     args = parser.parse_args()
 
     segments = [(first, last + 1) for _, first, last in half_video_blocks(GAME)]

@@ -6,6 +6,9 @@
   shape_gap:   better than gap_switch (row 13). Uses a players-only model (prep/shape_model.py):
                the switch goes where the model says, and if the same team has it before and after,
                a hidden spell by the other team is put in when the model is sure (2 s+).
+  model_override: with the ball visible too (row 14): where nobody is clearly on the ball (ball in
+               flight, contested), the model can overrule our team call if it's sure for 2 s+.
+               Never on frames where our team is clearly on the ball.
   merge_short: a possession under 1 s isn't "controlled" (CHALLENGE.md: a touch without control
                or a deflection is not a change). Give it to the team before it, or to the team
                after it at the start of a live stretch.
@@ -95,4 +98,43 @@ def shape_gap(labels, ball_seen, p_home, insert=True, penalty=25.0, min_s=2.0, c
                     best, bi, bj = cur, ci, t + 1
             if best > penalty and bj - bi >= min_s * 25:
                 labels[s + bi:s + bj] = other
+    return labels
+
+
+OTHER = {"H": "A", "A": "H"}
+
+
+def on_ball(df, teams, pitch):
+    """'H' / 'A' / '' per frame: the team clearly on the ball (sticky's "closest" rule)."""
+    import sticky
+
+    dh, da = sticky.team_distances(df, teams, pitch)
+    return np.where((dh <= sticky.ZONE_M) & (dh + sticky.MARGIN_M <= da), "H",
+                    np.where((da <= sticky.ZONE_M) & (da + sticky.MARGIN_M <= dh), "A", ""))
+
+
+def model_override(labels, p_home, near=None, penalty=150.0, min_s=2.0, max_flips=200):
+    """near: if given, never flip a frame where our team is clearly on the ball."""
+    labels = labels.copy()
+    lp = _logs(p_home)
+    for s, e in runs(np.isin(labels, ["H", "A"])):
+        for _ in range(max_flips):
+            seg = labels[s:e]
+            cur = np.where(seg == "H", lp["H"][s:e], lp["A"][s:e])
+            alt = np.where(seg == "H", lp["A"][s:e], lp["H"][s:e])
+            d = alt - cur
+            if near is not None:
+                d = np.where(near[s:e] == seg, -1e3, d)
+            best, run, ci, bi, bj = 0.0, 0.0, 0, 0, 0
+            for t, v in enumerate(d):
+                if run <= 0:
+                    run, ci = v, t
+                else:
+                    run += v
+                if run > best:
+                    best, bi, bj = run, ci, t + 1
+            if best <= penalty or bj - bi < min_s * 25:
+                break
+            seg[bi:bj] = np.where(seg[bi:bj] == "H", "A", "H")
+            labels[s:e] = seg
     return labels
