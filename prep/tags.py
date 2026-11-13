@@ -65,8 +65,9 @@ def restart_frame(nip, a, kickoff=False):
             s -= 1
         return s, r
     lo, hi = a + SEARCH[0], a + SEARCH[1]
-    for s, e in runs(nip[a - 500:hi]):
-        s, e = s + a - 500, e + a - 500
+    a0 = max(a - 500, 0)  # a tag in the first 20 s must not wrap around to the end
+    for s, e in runs(nip[a0:hi]):
+        s, e = s + a0, e + a0
         if e >= lo and e - s >= MIN_STRETCH and e < hi:
             return s, e
     return a + DEFAULT_OFFSET - 50, a + DEFAULT_OFFSET

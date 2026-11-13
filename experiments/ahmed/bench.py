@@ -85,7 +85,8 @@ def real_like_ball(df, gt, pitch, segments, seed=0, hard=False):
             if rng.random() < DEAD_HIDDEN:
                 if hard:
                     s, e = s + rng.integers(-75, 76), e + rng.integers(-75, 76)
-                    s, e = max(s, 0), max(e, s + 1)
+                    s = max(s, 0)
+                    e = max(e, s + 1)  # after s is clamped: a negative e would hide the whole half
                 hide[a + s:a + e] = True
     live = np.isin(gt, ["H", "A"])
     with np.errstate(invalid="ignore"):
