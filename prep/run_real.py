@@ -1,4 +1,4 @@
-"""Our current best approach (row 8 in docs/notes.md) on the real match: data in, submission out.
+"""Our current best approach (row 11 in docs/notes.md) on the real match: data in, submission out.
 
     python prep/run_real.py                 # writes evaluation/results/<name>.csv, checks, scores
     python prep/run_real.py --name try2     # pick the file name
@@ -6,8 +6,13 @@
 Steps:
   1. Load the tracking with the starter's loader (starter/load_atd.py, via kloppy). Takes a few
      minutes: 199,319 frames.
-  2. Labels: sticky possession ("closest" rule) for the team, stoppage when the ball leaves the
-     pitch (prep/ball_out.py) or the players slow down (prep/stoppage.py).
+  2. Stoppages: the ball leaves the pitch (prep/ball_out.py), the players slow down
+     (prep/stoppage.py, silenced for 10 s after each tagged restart), or the ball reappears outside
+     after being missing (prep/stop_fixes.py); then stoppages under 2 s are dropped. Added from the
+     automatic tags (prep/tags.py): each set piece back to where play stopped, each goal until the
+     kickoff, before each half's kickoff, and frames with under 10 players tracked.
+     Team: sticky possession ("closest" rule, prep/sticky.py); the team taking a tagged set piece
+     gets the first bit after it.
   3. X before kickoff, at halftime and after the final whistle (never graded).
   4. Run the official validator, then score against the public 5 minutes. That score is a
      sanity check only, never a way to pick between versions (RULES.md).
@@ -29,6 +34,9 @@ from ball_out import dead_from_ball_out  # noqa: E402
 from baseline import write_submission  # noqa: E402
 from stoppage import dead_from_players  # noqa: E402
 from sticky import players_by_team, runs, sticky_labels  # noqa: E402
+from stop_fixes import dead_before_restart, drop_short  # noqa: E402
+from tags import (QUIET_AFTER_RESTART, dead_after_goals, dead_at_edges, dead_from_restarts,  # noqa: E402
+                  restart_team, tag_inputs)
 
 
 def load_frames(game=GAME):
@@ -45,9 +53,20 @@ def load_frames(game=GAME):
 
 def predict(ds, df, segments, pitch):
     teams = players_by_team(ds)
-    dead = dead_from_ball_out(df, segments, pitch=pitch) | \
-        dead_from_players(df, sum(teams, []), segments, pitch=pitch)
-    return sticky_labels(df, teams, segments, "closest", dead=dead, pitch=pitch)
+    restarts, restart_teams, kickoffs, goals = tag_inputs()
+    restart_dead, rframes = dead_from_restarts(df, pitch, restarts, with_frames=True)
+    speed = dead_from_players(df, sum(teams, []), segments, pitch=pitch)
+    for r in rframes:
+        speed[r:r + QUIET_AFTER_RESTART] = False
+    dead = drop_short(dead_from_ball_out(df, segments, pitch=pitch) | speed | dead_before_restart(df, segments),
+                      segments)
+    dead = dead | restart_dead | dead_after_goals(df, goals) | dead_at_edges(df, segments, kickoffs)
+    labels = sticky_labels(df, teams, segments, "closest", dead=dead, pitch=pitch)
+    labels = restart_team(labels, rframes, restart_teams)
+    graded = np.zeros(len(labels), dtype=bool)
+    for a, b in segments:
+        graded[a:b] = True
+    return np.where(graded, labels, "X")
 
 
 def ballpark(labels, segments):
@@ -65,7 +84,7 @@ def ballpark(labels, segments):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--name", default="ours_row8")
+    parser.add_argument("--name", default="ours_row11")
     args = parser.parse_args()
 
     segments = [(first, last + 1) for _, first, last in half_video_blocks(GAME)]

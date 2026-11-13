@@ -28,10 +28,10 @@ from sample_game import META, PITCH, RAW, SAMPLE, drop_ball  # noqa: E402
 from baseline import write_submission  # noqa: E402
 
 # Params. Football sense, except SWITCH_FRAMES: picked on the practice match (row 8 in docs/notes.md).
-ZONE_M = 2.0          # a player this close to the ball can be on it
+ZONE_M = 1.5          # a player this close to the ball can be on it (2.0 before row 11)
 SWITCH_FRAMES = 8     # 0.32 s of the other team on the ball before possession changes (was 12 before row 8)
 DEAD_FRAMES = 75      # 3 s without a ball = stoppage
-MARGIN_M = 1.0        # "closest" rule: must be this much closer than the nearest opponent
+MARGIN_M = 0.5        # "closest" rule: must be this much closer than the nearest opponent (1.0 before row 11)
 
 
 def team_distances(df, players_by_team, pitch=PITCH):
