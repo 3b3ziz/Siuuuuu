@@ -16,7 +16,7 @@ Use Claude to move fast. Spend human time watching the match, thinking about wha
 ## When the real data lands
 
 1. Unzip into `data/` (names as they arrive, see DATA.md).
-2. `python prep/run_real.py` loads the tracking, runs our best approach (row 8), writes `evaluation/results/ours_row8.csv`, runs the official checker, scores it on the 5 public minutes, and prints ballpark checks (stoppage share, number of stoppages and possessions). Dry run passed on the practice match.
+2. `python prep/run_real.py` loads the tracking, runs our best approach (row 9), writes `evaluation/results/ours_row9.csv`, runs the official checker, scores it on the 5 public minutes, and prints ballpark checks (stoppage share, number of stoppages and possessions). Dry run passed on the practice match.
 3. Watch the 5 public minutes on the tactical video next to the answer key. Questions to answer:
    - Does their stoppage start at the whistle or when the ball crosses the line?
    - Is the ball tracked during stoppages, or does it vanish like in the practice match?
@@ -45,6 +45,9 @@ Our working beliefs about how the game works. We update these as we learn.
 - **Does the ball move during a stoppage?** Depends on the stoppage type. Revisit with the real data (decides whether "moving ball = live" from row 7 is safe).
 - **Ball between two players.** When the ball is about halfway between a player from each team, guess from who passed it: a pass from A is probably going to an A teammate. Right now we just keep the last team when it's unclear.
 - **Who's on the ball.** A dribbler keeps it within about 1 m, so 2 m works as "near". "No opponent within 2 m" is unrealistic in duels and crowded areas. "Clearly closest" works better.
+- **The truth switches at the first touch, not at control.** On the practice match (event-based answer key) a possession starts the moment the other team touches the ball: an interception, a tackle, a clearance. Waiting until a player "has it" is late by up to half a second, which is a lot when possessions last 0.8 s. So the switch has to be dated to the touch.
+- **A flying or loose ball stays with the last team.** A pass in the air, a ball bouncing between players, a ball the tracker has lost: none of it changes who owns the ball until the other team visibly plays it. Loss is never a separate event; only a gain by the other team changes the label. A duel (both teams inside 1 m) freezes it.
+- **Touch = zone + kinematics.** "Closest within 2 m for 8 frames" (row 8) confuses a defender running past the ball with a touch. Row 9 asks for a player inside 1 m *and* the ball reacting (direction change over 10° or a speed change over 5 m/s, with the ball moving at 1.5 m/s or more), and places the switch at the vertex of that change. A near run of 8 frames inside 1 m still confirms a switch without a visible kick (a slow dribble).
 
 ## Football stats (general, not about our match)
 
@@ -73,6 +76,7 @@ Ranges, not targets. Providers measure differently.
 - `results_noisy` blanks the ball at random until it's visible 59% of the time, like ours. That makes the heaviest smoothing win, which is the wrong pick on the real match. Random dropouts aren't how the real tracker fails (it loses the ball in crowds and in the air). **Compare ideas on the clean version** until we have a more realistic dropout model.
 - It's much cleaner than our match: real player IDs that never swap, no speed column, ball visible about 96% of live play. Don't build anything that relies on a player keeping the same ID.
 - Our answer key comes from event data, so it's not exactly how theirs is made. Use it to compare ideas, not to chase their exact numbers.
+- **Ownership ceiling.** Swapping our stoppage mask for the truth's stoppages shows how much each half of the problem costs: row 8 reaches 0.593 clean / 0.563 noisy with the truth's stoppages, row 9 reaches 0.733 / 0.626. So on noisy data the stoppage mask is now the larger loss (0.626 to 0.509), not the team rule.
 
 ## Approaches and results
 
@@ -89,7 +93,8 @@ Score = spellF1, the number we're ranked on. Practice = sample match (clean ball
 | 5 | ball left the pitch (`prep/ball_out.py`): ball seen outside, or last seen within 2 m of a line then gone 1 s+ = stoppage from that moment until the ball is back inside | 0.507 | 0.364 | – | – | catches stoppages within 0.5 s (speed: 4.1 s late). But alone it misses fouls: 24 of 94 stoppages on clean, 42 on noisy |
 | 6 | #5 + #3's speed stoppages | 0.511 | **0.408** | – | – | best on noisy so far. Catches 82-88 of 94 stoppages. Speed is still doing work here (probably the fouls), just late |
 | 7 | #6, but a moving ball on the pitch (over 3 m/s) overrules the speed stoppage: flying ball = live | 0.511 | 0.401 | – | – | no change. Fixes the throw-in / goal-kick cases from the replays (more possessions found: 317 vs 292), but probably breaks stoppages where the ball moves while play is dead |
-| 8 | #6 with a quicker switch: other team on the ball for 8 frames (0.32 s) instead of 12 (0.48 s) | 0.503 | **0.444** | – | – | best on noisy so far. 321 possessions (true 381). Tried 4-12 frames and other zone sizes: under 8 starts flip-flopping in duels. Now the default in `prep/sticky.py`, so rows 1-7 ran with 12 |
+| 8 | #6 with a quicker switch: other team on the ball for 8 frames (0.32 s) instead of 12 (0.48 s) | 0.503 | 0.444 | 0.400 (sanity only) | – | 321 possessions (true 381). Tried 4-12 frames and other zone sizes: under 8 starts flip-flopping in duels. Default in `prep/sticky.py` since then, so rows 1-7 ran with 12 |
+| 9 | ball ownership (`prep/ball_ownership.py`, rule `"touch"`): the team changes on a visible touch by the other team (smoothed ball turns by over 10° or its speed changes by over 5 m/s, a player of that team inside 1 m, no opponent within 1.1 m), or after 8 frames inside a 1 m zone; a flying or loose ball and a ball gap stay with the last team; #6's stoppages | **0.624** | **0.509** | 0.456 (sanity only) | – | best on both. 351 possessions found on clean, 289 on noisy (true 381), fewer missed truth possessions than row 8 on every set, also on the IDSSE open matches (0.402 vs 0.336). Now the default in `prep/run_real.py`. Constants picked on the practice match only |
 
 ## Research ideas
 

@@ -1,4 +1,4 @@
-"""Our current best approach (row 8 in docs/notes.md) on the real match: data in, submission out.
+"""Our current best approach (row 9 in docs/notes.md) on the real match: data in, submission out.
 
     python prep/run_real.py                 # writes evaluation/results/<name>.csv, checks, scores
     python prep/run_real.py --name try2     # pick the file name
@@ -6,7 +6,7 @@
 Steps:
   1. Load the tracking with the starter's loader (starter/load_atd.py, via kloppy). Takes a few
      minutes: 199,319 frames.
-  2. Labels: sticky possession ("closest" rule) for the team, stoppage when the ball leaves the
+  2. Labels: ball ownership ("touch" rule, prep/ball_ownership.py) for the team, stoppage when the ball leaves the
      pitch (prep/ball_out.py) or the players slow down (prep/stoppage.py).
   3. X before kickoff, at halftime and after the final whistle (never graded).
   4. Run the official validator, then score against the public 5 minutes. That score is a
@@ -47,7 +47,7 @@ def predict(ds, df, segments, pitch):
     teams = players_by_team(ds)
     dead = dead_from_ball_out(df, segments, pitch=pitch) | \
         dead_from_players(df, sum(teams, []), segments, pitch=pitch)
-    return sticky_labels(df, teams, segments, "closest", dead=dead, pitch=pitch)
+    return sticky_labels(df, teams, segments, "touch", dead=dead, pitch=pitch)
 
 
 def ballpark(labels, segments):
@@ -65,7 +65,7 @@ def ballpark(labels, segments):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--name", default="ours_row8")
+    parser.add_argument("--name", default="ours_row9")
     args = parser.parse_args()
 
     segments = [(first, last + 1) for _, first, last in half_video_blocks(GAME)]

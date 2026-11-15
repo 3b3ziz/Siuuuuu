@@ -92,7 +92,17 @@ def sticky_segment(near, dead):
 
 
 def sticky_labels(df, players_by_team, segments, rule="alone", dead=None, pitch=PITCH):
-    """dead: a stoppage mask from elsewhere (e.g. prep/stoppage.py). None = rule 3."""
+    """dead: a stoppage mask from elsewhere (e.g. prep/stoppage.py). None = rule 3.
+
+    rule "touch" is row 9 (prep/ball_ownership.py): the team changes on a visible touch by the
+    other team, not on proximity. "alone" and "closest" are rows 1-8, unchanged.
+    """
+    if rule == "touch":
+        from ball_ownership import ball_ownership_labels  # (imported here: it imports from us)
+
+        if dead is None:
+            dead = dead_from_missing_ball(~np.isnan(df["ball_x"].to_numpy()))
+        return ball_ownership_labels(df, players_by_team, segments, dead, pitch)
     d_home, d_away = team_distances(df, players_by_team, pitch)
     if rule == "alone":
         home_on, away_on = d_away > ZONE_M, d_home > ZONE_M

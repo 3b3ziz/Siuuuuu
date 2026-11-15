@@ -8,3 +8,4 @@
 # requirements-starter.txt.
 numpy
 pandas
+scipy  # prep/ball_ownership.py smooths the ball track (savgol_filter)
