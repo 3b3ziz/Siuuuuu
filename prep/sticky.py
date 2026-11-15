@@ -94,7 +94,7 @@ def sticky_segment(near, dead):
 def sticky_labels(df, players_by_team, segments, rule="alone", dead=None, pitch=PITCH):
     """dead: a stoppage mask from elsewhere (e.g. prep/stoppage.py). None = rule 3.
 
-    rule "touch" is row 9 (prep/ball_ownership.py): the team changes on a visible touch by the
+    rule "touch" is row 9T (prep/ball_ownership.py): the team changes on a visible touch by the
     other team, not on proximity. "alone" and "closest" are rows 1-8, unchanged.
     """
     if rule == "touch":

@@ -38,6 +38,7 @@ VERSION = "v1"
 TRAIN_HIDING = ((10, False), (11, True))  # (seed, hard): differ from the bench seeds 0-2
 SWITCH_COST = 7.0  # flat from 5 to 10 on the bench
 LOCK_FRAMES = 50   # a team clearly on the ball for 2 s+ keeps it, whatever the model says
+TOUCH_WEIGHT = 1.0  # row 16: log-odds added for the team Atallah's touch rule names (0.5-1 flat on the bench)
 
 
 def _past(s, w):
@@ -111,6 +112,17 @@ def viterbi(p, live, penalty=SWITCH_COST):
                 k = 1 - k
         lab[s:e] = np.where(out == 0, "H", "A")
     return lab
+
+
+def blend_touch(p, touch, weight=TOUCH_WEIGHT):
+    """Row 16: nudge P(home) towards the team prep/ball_ownership.py (touch rule, row 9T) names.
+
+    The two see different things: the touch rule reads the ball's own movement (kicks, turns), the
+    model reads team shape. Blended, +0.017 over row 15 on the bench (45/48 game-runs, all 6 runs).
+    """
+    q = np.clip(p, 1e-3, 1 - 1e-3)
+    t = np.where(touch == "H", 1.0, np.where(touch == "A", -1.0, 0.0))
+    return 1 / (1 + np.exp(-(np.log(q / (1 - q)) + weight * t)))
 
 
 def lock_clear(p, near, min_frames=LOCK_FRAMES):
