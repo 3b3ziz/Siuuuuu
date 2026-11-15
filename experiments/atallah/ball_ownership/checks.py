@@ -2,7 +2,7 @@
 
 import numpy as np
 
-import _paths  # noqa: F401
+import _paths
 from sticky import runs
 
 FPS = 25.0

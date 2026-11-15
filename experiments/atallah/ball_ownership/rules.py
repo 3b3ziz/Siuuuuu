@@ -15,7 +15,7 @@ parameters can be swept from harness.py.
 
 import numpy as np
 
-import _paths  # noqa: F401
+import _paths
 import sticky
 from sticky import MARGIN_M, SWITCH_FRAMES, ZONE_M, runs, team_distances
 

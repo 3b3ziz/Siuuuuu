@@ -17,7 +17,7 @@ from collections import namedtuple
 import numpy as np
 import pandas as pd
 
-import _paths  # noqa: F401
+import _paths
 import possession_metrics as pm
 import sample_game
 from ball_out import dead_from_ball_out

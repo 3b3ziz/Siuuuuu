@@ -20,7 +20,7 @@ from datetime import date
 
 import numpy as np
 
-import _paths  # noqa: F401
+import _paths
 import possession_metrics as pm
 from baseline import write_submission
 
@@ -82,7 +82,7 @@ try:
     register_set("idsse", _idsse.load)
     if hasattr(_idsse, "load_clean"):
         register_set("idsse_clean", _idsse.load_clean)
-except Exception:   # noqa: BLE001  ImportError, SyntaxError, missing dependency, ...
+except Exception:  # ImportError, SyntaxError, missing dependency, ...
     pass
 
 

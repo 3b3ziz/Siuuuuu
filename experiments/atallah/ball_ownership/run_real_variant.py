@@ -33,7 +33,7 @@ import numpy as np
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 try:
-    import _paths  # noqa: F401  (sibling module, built in parallel)
+    import _paths  # (sibling module, built in parallel)
     ROOT = _paths.ROOT
 except ImportError:
     ROOT = os.path.abspath(os.path.join(HERE, "..", "..", ".."))
@@ -42,10 +42,10 @@ except ImportError:
         if _p not in sys.path:
             sys.path.insert(0, _p)
 
-import run_real  # noqa: E402  (prep/run_real.py; pulls in games, ball_out, stoppage, sticky)
-from games import GAME, GAMES, half_video_blocks, source_frames  # noqa: E402
-from baseline import write_submission  # noqa: E402
-import sticky  # noqa: E402
+import run_real  # (prep/run_real.py; pulls in games, ball_out, stoppage, sticky)
+from games import GAME, GAMES, half_video_blocks, source_frames
+from baseline import write_submission
+import sticky
 
 CACHE_DIR = os.path.join(ROOT, "data", "cache")
 FRAMES_PKL = os.path.join(CACHE_DIR, "real_frames.pkl")
@@ -62,7 +62,7 @@ FAST_MS = 12.0      # implied speed above this is not a footballer running
 
 def build_cache():
     """run_real.load_frames() once; pickle the frame and json-dump the team lists."""
-    import pandas as pd  # noqa: F401  (pickling goes through the DataFrame method)
+    import pandas as pd  # (pickling goes through the DataFrame method)
 
     os.makedirs(CACHE_DIR, exist_ok=True)
     t0 = time.perf_counter()

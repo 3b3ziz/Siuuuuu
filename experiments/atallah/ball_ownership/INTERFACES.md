@@ -19,7 +19,7 @@ for sub in ("prep", "starter", "evaluation", os.path.join("experiments", "atalla
     p = os.path.join(ROOT, sub)
     if p not in sys.path: sys.path.insert(0, p)
 ```
-Every script starts with `import _paths  # noqa` (same folder), then `import possession_metrics as pm`, `from sticky import ...` etc.
+Every script starts with `import _paths` (same folder), then `import possession_metrics as pm`, `from sticky import ...` etc.
 
 ## `cache.py`
 

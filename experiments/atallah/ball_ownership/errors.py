@@ -26,7 +26,7 @@ from collections import Counter, OrderedDict
 
 import numpy as np
 
-import _paths  # noqa: F401
+import _paths
 import possession_metrics as pm
 from plot_possessions import greedy_pairs
 from sticky import team_distances
@@ -38,7 +38,7 @@ import rules
 try:  # idsse is optional: register it when the module is importable, load only on request
     import idsse
     harness.register_set("idsse", idsse.load)
-except Exception:  # noqa: BLE001  (missing module or data must not block the practice runs)
+except Exception:  # (missing module or data must not block the practice runs)
     idsse = None
 
 FPS = pm.FPS

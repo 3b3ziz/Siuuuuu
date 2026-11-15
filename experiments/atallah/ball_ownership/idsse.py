@@ -89,16 +89,16 @@ import pandas as pd
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(HERE, "..", "..", ".."))
 try:
-    import _paths  # noqa: F401
+    import _paths
 except ImportError:  # same thing INTERFACES.md specifies for _paths.py
     for _sub in ("prep", "starter", "evaluation", os.path.join("experiments", "atallah")):
         _p = os.path.join(ROOT, _sub)
         if _p not in sys.path:
             sys.path.insert(0, _p)
-import possession_metrics as pm  # noqa: E402
-from sticky import period_segments  # noqa: E402
-from stoppage import dead_from_players  # noqa: E402
-from ball_out import dead_from_ball_out  # noqa: E402
+import possession_metrics as pm
+from sticky import period_segments
+from stoppage import dead_from_players
+from ball_out import dead_from_ball_out
 
 IDSSE_DIR = os.path.join(ROOT, "data", "idsse")
 RAW_DIR = os.path.join(IDSSE_DIR, "raw")

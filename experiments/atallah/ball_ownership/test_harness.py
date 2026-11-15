@@ -14,7 +14,7 @@ import time
 
 import numpy as np
 
-import _paths  # noqa: F401
+import _paths
 import possession_metrics as pm
 import sample_game
 from sticky import sticky_segment
