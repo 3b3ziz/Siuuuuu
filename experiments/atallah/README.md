@@ -24,6 +24,7 @@ Where row 9 (`prep/ball_ownership.py`, the team's default since TIKI-17) was bui
 | `errors.py` | Categorises the truth possessions a variant misses (late switch, merged, split by a false stoppage, ...) and writes a per-spell table to `data/sample/cache/` |
 | `checks.py` | `extra_ballpark(labels, segments)`: spell-shape sanity checks (sub-0.5 s spells, turnover bursts, length percentiles, home share) |
 | `idsse.py` | A third practice set from the IDSSE open matches (kloppy Sportec), degraded to our match's ball visibility and slot swaps; registered with the harness |
+| `replay_export.py` | Writes `data/sample/views/replay.json` (gitignored): seven 30 s clips of the practice match (noisy copy) with truth / row 8 / row 9 labels and the whole-match label strips, picked deterministically from the scorer's matching. The Ball Ownership Scoreboard's Replay tab reads it as an attached source. Prints counts only |
 | `run_real_variant.py` | Runs any variant on the real match the way `prep/run_real.py` does (cached frames under `data/cache/`), writes `evaluation/results/<name>.csv`, validates and scores it |
 | `test_harness.py`, `test_rules.py`, `test_promotion.py`, `test_proofs.py` | Plain-assert checks: rows 1-8 still reproduce; the rule on synthetic scenes; `prep/ball_ownership.py` equals the experiment frame for frame; the Lean project builds with no proof holes |
 | `proofs/` | Lean 4 (lake) proofs about the segment state machine, gaps, IoU matching and the degradation model |

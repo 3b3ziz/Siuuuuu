@@ -28,6 +28,7 @@ start with one followed by a space, with no shell syntax):
 uv run --with numpy --with pandas --with kloppy --with scipy python experiments/atallah/ball_ownership/test_harness.py
 uv run --with numpy --with pandas --with kloppy --with scipy python experiments/atallah/ball_ownership/test_rules.py
 uv run --with numpy --with pandas --with kloppy --with scipy python experiments/atallah/ball_ownership/test_proofs.py
+uv run --with numpy --with pandas --with kloppy --with scipy python experiments/atallah/ball_ownership/test_replay.py
 uv run --with numpy --with pandas --with kloppy --with scipy python experiments/atallah/ball_ownership/errors.py
 uv run --with numpy --with pandas --with kloppy --with scipy python experiments/atallah/ball_ownership/idsse.py
 uv run --with numpy --with pandas --with kloppy --with scipy python experiments/atallah/ball_ownership/run_real_variant.py
