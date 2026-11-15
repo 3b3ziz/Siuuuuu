@@ -1,0 +1,9 @@
+# Pure Lean 4 proofs for the ball-ownership experiment. No mathlib: only core Lean (Nat/Int, omega, decide).
+name = "proofs"
+version = "0.1.0"
+defaultTargets = ["Proofs"]
+
+[[lean_lib]]
+name = "Proofs"
+srcDir = "."
+roots = ["IoU", "Segment", "Gap", "Degrade"]

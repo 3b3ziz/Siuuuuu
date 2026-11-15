@@ -67,3 +67,6 @@ env/
 # Your own instructions for Claude in this project. Shared ones go in CLAUDE.md.
 CLAUDE.local.md
 .claude/settings.local.json
+
+# farabi receipts (local verification state)
+.farabi/

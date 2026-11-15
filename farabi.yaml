@@ -1,0 +1,54 @@
+# Farabi policy for experiments/atallah/ball_ownership. Reference: farabi docs/reference/config.md
+# Deterministic checks only. The AI review (judge) is off: it never passes work alone and costs money.
+llm:
+  enabled: false
+
+command:
+  # Run on every verification (fast: a warm `lake build` takes under a second, a cold one ~5 s).
+  # test_proofs.py builds the Lean project and greps the sources for proof holes.
+  always:
+    - uv run --with numpy --with pandas --with kloppy --with scipy python experiments/atallah/ball_ownership/test_proofs.py
+  # A claim's `test:` command runs only when it equals one of these or starts with one followed by a
+  # space (src/checkers/command.ts isAllowed). Claim commands run without a shell, split on whitespace,
+  # from the repo root.
+  allow:
+    - uv run --with numpy --with pandas --with kloppy --with scipy python experiments/atallah/ball_ownership/test_harness.py
+    - uv run --with numpy --with pandas --with kloppy --with scipy python experiments/atallah/ball_ownership/test_rules.py
+    - uv run --with numpy --with pandas --with kloppy --with scipy python experiments/atallah/ball_ownership/test_promotion.py
+    - uv run --with numpy --with pandas --with kloppy --with scipy python experiments/atallah/ball_ownership/test_proofs.py
+    - uv run --with numpy --with pandas --with kloppy --with scipy python experiments/atallah/ball_ownership/test_replay.py
+    - uv run --with numpy --with pandas --with kloppy --with scipy python experiments/atallah/ball_ownership/errors.py
+    - uv run --with numpy --with pandas --with kloppy --with scipy python experiments/atallah/ball_ownership/idsse.py
+    - uv run --with numpy --with pandas --with kloppy --with scipy python experiments/atallah/ball_ownership/run_real_variant.py
+    # lake resolves its toolchain from the working directory (elan has no default here) and claim commands
+    # run from the repo root, so cite test_proofs.py (it runs lake build inside proofs/) rather than this.
+    - lake build
+  timeout_ms: 600000
+
+integrity:
+  protected:         # changes here always need a person
+    - farabi.yaml
+    - .github/workflows/**
+    - starter/**
+    - evaluation/**
+    - games.py
+
+receipts:
+  notes: false
+
+policies:
+  # Claims files verified as plain text (`farabi verify text:<claims file>`): there is no diff, so the
+  # integrity and scope checks have nothing to run on and would leave every verdict at needs_human.
+  # Grounding (cited files and lines exist on disk) and the test commands must both pass.
+  - name: claims-text
+    match: { source: [text] }
+    require: [grounding, command]
+    require_claims: true
+    min_deterministic_pass: 2
+  # Commits, worktree and pull requests: the full set.
+  - name: default
+    match: { author: any }
+    require: [integrity, scope, grounding, command]
+    optional: [formal, ci]
+    require_claims: true
+    min_deterministic_pass: 2
