@@ -30,40 +30,57 @@ def test_switches_counts_only_live_changes():
     assert R.switches(codes, 0, 25) == 0                  # a stoppage between two H runs is no switch
 
 
-def test_pick_clips_is_deterministic_inside_segments_and_disjoint():
-    # Two halves of 2000 frames, truth alternating H/A possessions of 40 frames with short D gaps.
-    half = []
-    for i in range(24):
-        half += [(H if i % 2 == 0 else A, 40), (D, 10)]
-    gt = np.concatenate([codes_from(half), codes_from(half)])
+def test_window_stays_inside_the_half():
+    segments = [(0, 1000), (1000, 2000)]
+    assert R.window_for(500, segments, 300) == (350, 650)
+    assert R.window_for(20, segments, 300) == (0, 300)            # clamped at the start of the half
+    assert R.window_for(1990, segments, 300) == (1700, 2000)      # clamped at the end, never into the hole
+    assert R.window_for(1010, segments, 300) == (1000, 1300)
+
+
+def test_stoppage_kind_from_the_clean_ball_track():
+    nan = np.nan
+    bx = np.array([0.5, 0.5, 0.5, nan, 0.5, 0.5, 1.2, 0.9, 0.5, 0.5])
+    by = np.array([0.5, -0.1, 0.5, nan, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5])
+    assert R.stoppage_kind(bx, by, 0, 3) == "Throw-in"
+    assert R.stoppage_kind(bx, by, 5, 8) == "Goal kick or corner"
+    assert R.stoppage_kind(bx, by, 8, 10) is None                 # on the pitch and short
+    bx2 = np.full(60, 0.5)
+    assert R.stoppage_kind(bx2, bx2, 0, 60) == "Free kick"        # on the pitch for STOP_FRAMES
+
+
+def test_choose_is_deterministic_and_disjoint():
+    cands = [(3, 100, 100, 200, "a"), (3, 50, 50, 150, "b"), (1, 900, 900, 1000, "c"), (5, 120, 120, 220, "d")]
+    chosen = []
+    taken = R.choose(cands, 2, chosen)
+    assert [t[2] for t in taken] == ["d", "c"], "best score first, then an earlier non-overlapping one"
+    assert R.choose(cands, 2, []) == R.choose(cands, 2, [])
+    assert R.choose(cands, 3, chosen) == [], "nothing left that does not overlap"
+
+
+def test_plan_names_restarts_and_misses():
+    # One half: H 40, D 60 (ball out over the touchline), A 40, D 10, H 6, A 40, D 60 (ball on the pitch), H 40, D 10, A 40.
+    spec = [(H, 40), (D, 60), (A, 40), (D, 10), (H, 6), (A, 40), (D, 60), (H, 40), (D, 10), (A, 40)]
+    gt = codes_from(spec)
     n = len(gt)
-    segments = [(0, n // 2), (n // 2, n)]
-    runs = [(0, n)]
-    spells = pm.possession_spells(gt, runs)
-    kinds = ["typical" if i % 4 == 0 else "fixed" if i % 4 == 1 else "missed" if i % 4 == 2 else "lost"
-             for i in range(len(spells))]
-    a = R.pick_clips(spells, kinds, gt, segments, 100)
-    b = R.pick_clips(spells, kinds, gt, segments, 100)
-    assert a == b, "two runs must pick the same clips"
-    assert len(a) == sum(R.PER_KIND.values())
-    for kind, gi, start, end in a:
-        assert kinds[gi] == kind
-        assert end - start == 100
-        seg_a, seg_b = R.segment_of(spells[gi][0], segments)
-        assert seg_a <= start and end <= seg_b, "a clip never crosses the half-time hole"
-        assert start <= spells[gi][0] and spells[gi][1] <= end, "the clip holds the possession it was picked for"
-    windows = sorted((s, e) for _, _, s, e in a)
+    runs, segments = [(0, n)], [(0, n)]
+    spells = pm.possession_spells(gt, runs)                       # H, A, H(6), A, H, A
+    kinds = ["typical", "typical", "missed", "typical", "typical", "fixed"]
+    cats = ["matched", "matched", "missed switch (short)", "matched", "matched", "matched"]
+    bx = np.full(n, 0.5)
+    by = np.full(n, 0.5)
+    by[41] = -0.2                                                 # out over the touchline in the first stoppage
+    d_segments = [(s, e) for s, e, k in pm.segments(gt, runs) if k == D]
+    chosen, pools = R.plan_clips(spells, kinds, cats, gt, segments, 40, d_segments, (bx, by), [])
+    names = [c[2]["name"] for c in chosen]
+    for want in ("Throw-in", "Free kick", "Short possession", "Row 9 fixes a switch"):
+        assert want in names, (want, names)
+    assert pools["Goal kick or corner"] == 0
+    for start, end, payload in chosen:
+        assert 0 <= start < end <= n and end - start <= 40
+    windows = sorted((s, e) for s, e, _ in chosen)
     for (s0, e0), (s1, e1) in zip(windows, windows[1:]):
         assert e0 <= s1, "clip windows do not overlap"
-
-
-def test_short_truth_possessions_are_not_candidates():
-    gt = codes_from([(H, 5), (A, 5)] * 50)
-    runs = [(0, len(gt))]
-    spells = pm.possession_spells(gt, runs)
-    kinds = ["missed"] * len(spells)
-    assert all(b - a < R.MIN_SPELL for a, b, _ in spells)
-    assert R.pick_clips(spells, kinds, gt, [(0, len(gt))], 100) == []
 
 
 def test_strip_matches_scorer_segments():
