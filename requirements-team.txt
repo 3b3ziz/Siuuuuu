@@ -1,0 +1,3 @@
+# Our extras on top of requirements.txt and requirements-starter.txt (organisers' files).
+scikit-learn==1.9.1         # players-only possession model (prep/shape_model.py)
+opencv-python-headless      # clips for watching the video (experiments/ahmed/make_clips.py)

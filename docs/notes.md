@@ -16,7 +16,7 @@ Use Claude to move fast. Spend human time watching the match, thinking about wha
 ## When the real data lands
 
 1. Unzip into `data/` (names as they arrive, see DATA.md).
-2. `python prep/run_real.py` loads the tracking, runs our best approach (row 9), writes `evaluation/results/ours_row9.csv`, runs the official checker, scores it on the 5 public minutes, and prints ballpark checks (stoppage share, number of stoppages and possessions). Dry run passed on the practice match.
+2. `python prep/run_real.py` loads the tracking, runs our best approach (row 16), writes `evaluation/results/ours_row16.csv`, runs the official checker, scores it on the 5 public minutes, and prints ballpark checks (stoppage share, number of stoppages and possessions). Dry run passed on the practice match.
 3. Watch the 5 public minutes on the tactical video next to the answer key. Questions to answer:
    - Does their stoppage start at the whistle or when the ball crosses the line?
    - Is the ball tracked during stoppages, or does it vanish like in the practice match?
@@ -24,10 +24,21 @@ Use Claude to move fast. Spend human time watching the match, thinking about wha
    - When does their possession switch: first touch, or once a player has it under control?
 4. Look at what the automatic tags catch (set pieces, throw-ins) vs what we catch.
 
+### What we found (Nov 13)
+
+- Data unpacked into `data/tactical/` and `data/broadcast/`. Row 8 runs in ~30 s and passes the checker.
+- Ball during their stoppages (public 5 min): sometimes tracked the whole time and barely moving (20 s and 14 s stoppages, 100% seen), sometimes mostly missing (7-20% seen). So "ball missing" and "ball still" are both only part of the story.
+- Our stoppages on the real match (row 8): 152, the normal is ~110. 70 come only from the speed rule, 33 only from ball-out, 49 from both. 32 last under 4 s.
+- Clips with our guess on screen: `python experiments/ahmed/make_clips.py` → `data/clips/` (20 clips, list in `index.csv`). From the stills:
+  - Many ball-out "stoppages" last 0.1-0.3 s: the ball flickers just outside a line in live play. Each one splits a possession. Fixed in row 9.
+  - Before a corner we go back to live too early (players move, ball still missing), then the ball appears at the corner flag. Fixed in row 9.
+  - A speed-only stoppage at 44:45 (half 1) looks real: linesman's flag up, players bunched around the halfway line, keeper about to take a long free kick.
+
 ## Football thinking we build on
 
 Our working beliefs about how the game works. We update these as we learn.
 
+- **Goal ruled out by VAR** (from Ahmed): the restart is a free kick for the defending team (offside or foul), not a kickoff, even if the automatic tags say kickoff.
 - **Play time.** Ball in play is only ~55% of the match in LaLiga (Barça 55%, Athletic 56%, Opta season averages). So expect ~45% stoppages over the full match. Just a ballpark check on our output, never a setting in the code.
 - **Two kinds of stoppage.** Ball out (throw-in, corner, goal kick): the ball crosses the line, which shows up in the tracking. Foul or offside: the ball stays on the pitch and play can carry on for a second after the whistle, so the ball position tells you nothing.
 - **Whistle delay.** Players take ~0.5-1 s to react to the whistle, then everyone slows down together. Spot that slowdown and date the stoppage back. The practice match's event data gives the real foul times, so we can measure the delay.
@@ -47,7 +58,7 @@ Our working beliefs about how the game works. We update these as we learn.
 - **Who's on the ball.** A dribbler keeps it within about 1 m, so 2 m works as "near". "No opponent within 2 m" is unrealistic in duels and crowded areas. "Clearly closest" works better.
 - **The truth switches at the first touch, not at control.** On the practice match (event-based answer key) a possession starts the moment the other team touches the ball: an interception, a tackle, a clearance. Waiting until a player "has it" is late by up to half a second, which is a lot when possessions last 0.8 s. So the switch has to be dated to the touch.
 - **A flying or loose ball stays with the last team.** A pass in the air, a ball bouncing between players, a ball the tracker has lost: none of it changes who owns the ball until the other team visibly plays it. Loss is never a separate event; only a gain by the other team changes the label. A duel (both teams inside 1 m) freezes it.
-- **Touch = zone + kinematics.** "Closest within 2 m for 8 frames" (row 8) confuses a defender running past the ball with a touch. Row 9 asks for a player inside 1 m *and* the ball reacting (direction change over 10° or a speed change over 5 m/s, with the ball moving at 1.5 m/s or more), and places the switch at the vertex of that change. A near run of 8 frames inside 1 m still confirms a switch without a visible kick (a slow dribble).
+- **Touch = zone + kinematics.** "Closest within 2 m for 8 frames" (row 8) confuses a defender running past the ball with a touch. Row 9T (Atallah) asks for a player inside 1 m *and* the ball reacting (direction change over 10° or a speed change over 5 m/s, with the ball moving at 1.5 m/s or more), and places the switch at the vertex of that change. A near run of 8 frames inside 1 m still confirms a switch without a visible kick (a slow dribble).
 
 ## Football stats (general, not about our match)
 
@@ -76,7 +87,7 @@ Ranges, not targets. Providers measure differently.
 - `results_noisy` blanks the ball at random until it's visible 59% of the time, like ours. That makes the heaviest smoothing win, which is the wrong pick on the real match. Random dropouts aren't how the real tracker fails (it loses the ball in crowds and in the air). **Compare ideas on the clean version** until we have a more realistic dropout model.
 - It's much cleaner than our match: real player IDs that never swap, no speed column, ball visible about 96% of live play. Don't build anything that relies on a player keeping the same ID.
 - Our answer key comes from event data, so it's not exactly how theirs is made. Use it to compare ideas, not to chase their exact numbers.
-- **Ownership ceiling.** Swapping our stoppage mask for the truth's stoppages shows how much each half of the problem costs: row 8 reaches 0.593 clean / 0.563 noisy with the truth's stoppages, row 9 reaches 0.733 / 0.626. So on noisy data the stoppage mask is now the larger loss (0.626 to 0.509), not the team rule.
+- **Ownership ceiling.** Swapping our stoppage mask for the truth's stoppages shows how much each half of the problem costs: row 8 reaches 0.593 clean / 0.563 noisy with the truth's stoppages, row 9T reaches 0.733 / 0.626. So on noisy data the stoppage mask is now the larger loss (0.626 to 0.509), not the team rule.
 
 ## Approaches and results
 
@@ -93,8 +104,72 @@ Score = spellF1, the number we're ranked on. Practice = sample match (clean ball
 | 5 | ball left the pitch (`prep/ball_out.py`): ball seen outside, or last seen within 2 m of a line then gone 1 s+ = stoppage from that moment until the ball is back inside | 0.507 | 0.364 | – | – | catches stoppages within 0.5 s (speed: 4.1 s late). But alone it misses fouls: 24 of 94 stoppages on clean, 42 on noisy |
 | 6 | #5 + #3's speed stoppages | 0.511 | **0.408** | – | – | best on noisy so far. Catches 82-88 of 94 stoppages. Speed is still doing work here (probably the fouls), just late |
 | 7 | #6, but a moving ball on the pitch (over 3 m/s) overrules the speed stoppage: flying ball = live | 0.511 | 0.401 | – | – | no change. Fixes the throw-in / goal-kick cases from the replays (more possessions found: 317 vs 292), but probably breaks stoppages where the ball moves while play is dead |
-| 8 | #6 with a quicker switch: other team on the ball for 8 frames (0.32 s) instead of 12 (0.48 s) | 0.503 | 0.444 | 0.400 (sanity only) | – | 321 possessions (true 381). Tried 4-12 frames and other zone sizes: under 8 starts flip-flopping in duels. Default in `prep/sticky.py` since then, so rows 1-7 ran with 12 |
-| 9 | ball ownership (`prep/ball_ownership.py`, rule `"touch"`): the team changes on a visible touch by the other team (smoothed ball turns by over 10° or its speed changes by over 5 m/s, a player of that team inside 1 m, no opponent within 1.1 m), or after 8 frames inside a 1 m zone; a flying or loose ball and a ball gap stay with the last team; #6's stoppages | **0.624** | **0.509** | 0.456 (sanity only) | – | best on both. 351 possessions found on clean, 289 on noisy (true 381), fewer missed truth possessions than row 8 on every set, also on the IDSSE open matches (0.402 vs 0.336). Now the default in `prep/run_real.py`. Constants picked on the practice match only |
+| 8 | #6 with a quicker switch: other team on the ball for 8 frames (0.32 s) instead of 12 (0.48 s) | 0.503 | **0.444** | 0.400 | – | best on noisy until row 9. 321 possessions (true 381). Tried 4-12 frames and other zone sizes: under 8 starts flip-flopping in duels. Now the default in `prep/sticky.py`, so rows 1-7 ran with 12 |
+| 9 | #8 + two stoppage fixes from watching the real match (`prep/stop_fixes.py`): drop stoppages under 2 s; ball missing then reappearing outside the pitch (corner, throw-in being taken) = the missing stretch was a stoppage | 0.528 | **0.469** | – | – | best on noisy. Under the luck line (+0.025) but up on both versions. Real match: 152 → 136 stoppages (normal is ~110). The 2 s rule does most of it |
+| 10 | #9 + Smart Tagging (`prep/tags.py`): stoppage from each tagged set piece back to where the ball stopped being in play; speed rule silenced 10 s after each restart; team taking the set piece gets the first bit; dead from goal to kickoff, before each half's kickoff, and under 10 players tracked | bench 0.448 | | 0.400 (sanity) | – | bench = 8 games, see below. 8/8 games beat row 8 (0.422). Goals/edges not on the bench (laws of the game) |
+| 11 | #10 with a tighter "on the ball" test: within 1.5 m (was 2) and 0.5 m closer than the nearest opponent (was 1) (`experiments/ahmed/sweep_team.py`; now the defaults in `prep/sticky.py`) | bench 0.464 | | 0.444 (sanity) | – | `ours_row11.csv` (branch `row11-shared`, same file byte for byte as the experiment). Old practice check (`prep/ball_out.py`, Metrica noisy): row 8 with the new settings 0.439 vs 0.444, even within luck. 7/8 games beat row 10. Switching after 6 frames scores higher on Bundesliga but lower on Metrica (tracking like ours), so kept 8. Real match: 348 possessions (row 10: 404) |
+| 12 | #11 + two team clean-ups (`prep/team_fixes.py`): a switch hidden in a ball-missing stretch goes halfway into it (was: at the end); possessions under 1 s go to the team before ("touch without control") | bench 0.470 (controlled keys 0.565) | | – | – | `ours_row12.csv`. Better than row 11 on all 6 bench runs (3 seeds × normal/hard): raw keys +0.005, controlled keys +0.028 (8/8 games every run), Metrica +0.022. Real match: only 0.3% of frames change, 347 → 336 possessions, so the real gain is probably smaller |
+| 13 | #12, but inside ball-missing stretches a players-only model decides (`prep/shape_model.py`, `prep/team_fixes.py: shape_gap`): where the switch goes, and whether the other team had a hidden spell (2 s+) when the same team has it before and after. Model: team shape and movement (centroid, spread, back/front line, forward speed, at 1/4/10 s), gradient boosting, trained on the 7 Bundesliga games with home/away swapped | bench 0.485 (controlled 0.582) | | – | – | `ours_row13.csv`. Over row 12 on 6 bench runs: raw +0.014 (worst +0.011, 7-8/8 games), Metrica +0.011 (one run -0.003). Players-only model alone: team right on 82-90% of live frames (leave-one-game-out), 87.6% on Metrica (never trained on). On our match it agrees with our labels on 82% of ball-seen frames (bench: 87-88%), so it mostly carries over. Real file: 0.3% of frames change (only ~8,600 live frames have no ball). Needs `requirements-team.txt` and the Bundesliga data |
+| 14 | #13 + the players-only model with the ball visible too (`prep/team_fixes.py: model_override`): where nobody is clearly on the ball (in flight, contested), it overrules our team call if sure for 2 s+ (summed log-odds over 150). Never on frames where our team is clearly on the ball | bench 0.505 (controlled 0.601) | | – | – | `ours_row14.csv` (commit c5211ef). Over row 13 on all 6 bench runs: raw +0.021 (8/8 games every run), Metrica +0.025 (worst +0.021). Without the "never when we're clearly on the ball" lock it hurt Metrica and flipped clear ball evidence on our match. Practice: flips 1.5-6% of live frames, 74-95% of flips right. Our match: 5.6% of live frames (36 stretches), inside that range. Possessions 340 → 353 |
+| 15 | New team call (`prep/ball_model.py`): one model gives P(home has it) per frame from the players' shape (row 13 features) **plus the ball when it's there** (each team's distance to it, who's clearly on it in the last/next 0.5-2 s, last-seen/next-seen before and after a gap, time since/until seen, ball speed). Trained on the 7 Bundesliga games with the ball hidden like ours (`prep/hide_ball.py`, seeds 10/11, not the bench's). Then the most likely H/A sequence in each live stretch, at a cost of 7 per switch (Viterbi). A team clearly on the ball for 2 s+ keeps it. Stoppages unchanged from row 14 | bench 0.564 (controlled 0.645) | | – | – | `ours_row15.csv` (commit 9f29345). Over row 14 on all 6 bench runs: raw +0.069 (48/48 game-runs, worst +0.035), controlled +0.054 (48/48), Metrica +0.048 (never in training). Model alone: team right on 90% of live frames (players-only: 87%). Most of the gain is the decoder: the same model through row 14's fix-ups gave only +0.014. Not learning the fake hiding: trained on a different hiding recipe (25% of live hidden, gaps 1.5x, fill under 2 s) it still gives +0.069, 48/48 (`experiments/ahmed/ball_model_robust.py`). Switch cost flat from 5 to 10. Pressure features (`shape_v2.py`) added nothing. Our match: 4.2% of frames change vs row 14 (bench 4.1-4.3%), possessions 353 → 349. It overruled "clearly on the ball for 1 s+" 2x more than on practice, hence the 2 s lock (costs -0.001 on the bench). Regenerates byte for byte with caches deleted |
+| 9T | Atallah's ball ownership (`prep/ball_ownership.py`, rule `"touch"`): the team changes on a visible touch by the other team (smoothed ball turns by over 10° or its speed changes by over 5 m/s, a player of that team inside 1 m, no opponent within 1.1 m), or after 8 frames inside a 1 m zone; a flying or loose ball and a ball gap stay with the last team; #6's stoppages | **0.624** | **0.509** | 0.456 (sanity only) | – | best on both. 351 possessions found on clean, 289 on noisy (true 381), fewer missed truth possessions than row 8 on every set, also on the IDSSE open matches (0.402 vs 0.336). Was the default on main (as "row 9") before row 16; here it feeds row 16. Constants picked on the practice match only |
+| 16 | #15, with Atallah's touch rule (row 9T) as a second opinion: before the decoder, the model's log-odds get +1 towards the team the touch rule names (`prep/ball_model.py: blend_touch`). The touch rule reads the ball's own movement (kicks, turns), the model reads team shape, so they catch different things | bench **0.580** | | – | – | **current best**, `python prep/run_real.py` → `ours_row16.csv`. Over row 15 on all 6 bench runs (45/48 game-runs, worst -0.005): raw +0.017, controlled +0.006, Metrica +0.016 (the touch rule's settings were picked on Metrica, so that one is flattered). Weight 0.5-1 flat, 2+ worse. On the same bench the touch rule alone with our stoppages scores 0.559, Atallah's main (row 8 stoppages) 0.529. Our match: 3.2% of frames change vs row 15, stoppages identical, 349 → 340 possessions. Reproducible. Needs scipy (`requirements.txt`) |
+
+## Test bench: 8 games with the ball lost like on our match (`experiments/ahmed/bench.py`)
+
+How our match loses the ball (measured Nov 13, all graded frames):
+- missing 41% overall: about 72% of stoppage frames, 15% of live frames (split by our own labels)
+- only ~150 gaps, all long: no gap between 1 s and 5 s, so the tracker fills short losses with a straight line. Live gaps last 5-25 s
+- in live play a gap starts 5x more often when the ball was last seen within 2 m of a line
+
+The bench copies that onto the Metrica game and the 7 Bundesliga games (seeded), plus fake set piece tags for 55% of restarts (like the real 59). A change counts as better if the mean goes up and it wins on most of the 8 games, not the single-match 0.04 line.
+
+| version | bench mean | wins vs row 8 |
+|---|---|---|
+| row 8 | 0.422 | – |
+| row 9 | 0.428 | 6/8 |
+| row 10 restarts only | 0.440 | 8/8 |
+| row 10 (+ team at restart, speed quiet after restart) | 0.448 | 8/8 |
+| row 11 (tighter "on the ball") | 0.464 | 8/8 |
+
+Nov 13, round 2 (`experiments/ahmed/fastbench.py`: same bench, in-process, any seed):
+- **Where the points are.** Perfect stoppages with our team logic: 0.464 → 0.52. Our stoppages with the perfect team: 0.89. So "who has the ball" is the bottleneck, not stoppages.
+- **Team errors:** ~12% of live frames with the ball seen, ~25-38% with it missing. Half are within 1 s of a real change (timing, no bias). Long wrong stretches are mostly switches we miss while the ball is hidden. Perfect calls inside hidden stretches would be worth ~+0.05.
+- **Bundesliga keys flip on every touch:** 40-50% of their possessions are under 3 s; the changes we miss mostly last 4-6 frames on the ball. The organisers say a touch without control doesn't count. So a second yardstick, "controlled" keys (`experiments/ahmed/controlled.py`): possessions under 2 s merged into the team before. Mean possession then 9-15 s.
+- **Switching after 8 frames is still best**, on both raw and controlled keys (12, 16, 25 all lower).
+- **Careful with the controlled keys:** they're built with the same merge as row 12, so any "merge short possessions" change scores well on them by design. Don't tune merge settings on them (2 s merge rejected for that reason). Judge on Metrica and the raw keys.
+- **Row 12's practice gain likely overstates the real one:** the merge mostly cleans up noise from the straight-line-filled ball, which is 15% of live frames on Metrica, 3-5% on Bundesliga, ~1.4% on our match. The real file changed on 0.3% of frames.
+- **Open call, switch speed:** with row 12, switching after 6 frames is +0.016 to +0.028 on the raw Bundesliga keys but -0.009 to -0.018 on Metrica and lower on controlled keys. The organisers' key comes from their tracking's owning team, the same kind of source as DFL's, so the Bundesliga side isn't obviously wrong. Kept 8 (rulebook "controlled" wording + Metrica). Team decision; not to be settled with the public 5 minutes.
+- **Biggest lever left:** who has the ball while it's hidden (worth up to ~+0.05 on practice). Done in row 13 (+0.014), research in `docs/research/possession-without-ball.md`. Row 14 then used it with the ball visible too (+0.021). Row 15 replaced the fix-ups with one ball-aware model and a sequence decoder (+0.069). Next: the published PathCRF model (same 7 games, 92%), or a better players-only model (more features, Metrica in training).
+- **Noise between seeds:** row 11 moves 0.457-0.464 across seeds. Accept a change only if it wins on every seed, Metrica included.
+- Two bench bugs fixed (both bench-only, the real match can't hit them): a tag in the first 20 s wrapped around and marked the whole half stopped; in `--hard`, a hidden stretch shifted before frame 0 hid the whole half.
+
+Harder version (`bench.py --hard`): hidden stretches start/end up to 3 s off the real stoppage edges, and fake tags only on restarts near a line or in a box (like the real tags: throw-ins, corners, goal kicks). Row 8 0.413, row 9 0.422, row 10 0.436, row 11 0.446: smaller gains, still 8/8 games.
+
+Smart Tagging findings:
+- Set piece tags are fixed windows: 35 s (kickoffs 5 s). The restart is ~4-6 s after the tag starts (kickoffs 3.5 s exactly), seen as the ball reappearing, or held outside for a throw-in, then moving.
+- Goals: the tracker loses the ball in the net, so the goal moment = end of the attack where the ball was last seen. All 4 checked on the scoreboard: 46678 (1-0 Barça), 73997 (1-1), 157546 (2-1 Barça). The one at 58081 (Athletic) never changed the score, probably ruled out after a video check, but play was dead ~2.5 min anyway.
+- Tag team = the team taking the set piece: on goal kicks and free kicks the tagged team's player is nearest the ball at the restart 11 of 15 times, misses mostly where the restart detection looks off. Corners can't be checked this way (crowded box). Barcelona = home.
+- The kickoff tag after the ruled-out goal (62012): players stand around until the ball reappears at ~62334, so kickoff restarts now wait for the ball (up to 20 s).
+- Second half: graded from 110808 but kickoff is 113748; players were walking around in between, which we called "home has it". Now dead.
+- End of first half: from ~89058 only 1-5 players tracked (teams walking off). Under 10 players also happens during goal celebrations.
+
+Answered by Ahmed (Nov 13):
+- Goal ruled out by VAR (offside or foul) → restart is a free kick for the defending team where the offence was, not a kickoff. Fits 58081: we have it dead from 58073 to 62334, then Barça (the defenders) on the ball.
+- Throw-in side: can't check the video for now. The football rule: the team that didn't touch it last takes it. Tried "give the throw-in to the team that didn't have it last" on the practice games: 0.460 vs 0.464 (normal), 0.444 vs 0.446 (hard), no gain, so it's off (`tags.THROW_IN_GUESS = False`). Caveat: the fake tags apply it to every no-team tag, not just throw-ins.
+
+## More practice matches: 7 Bundesliga games
+
+`experiments/ahmed/bundesliga.py`. Free DFL data (CC-BY), downloaded from huggingface.co/datasets/pysport/idsse-data into `data/bundesliga/` (figshare blocks scripts). Answer key = DFL's own per-frame flags (ball alive/dead, which team has it), so it's their idea of possession, not the organisers'. Play is dead 41-52% of the time, in line with the general stats.
+
+Big difference from our match: DFL tracks the ball 100% of the time, even during stoppages. So rules built on "ball missing" behave differently here. The noisy version hides it in random gaps only.
+
+| approach | 7 games, clean (mean) | 7 games, noisy (mean) | range noisy |
+|---|---|---|---|
+| row 8 | 0.460 | 0.368 | 0.33-0.39 |
+| row 9 | 0.462 | 0.368 | 0.32-0.39 |
+
+Row 9 changes nothing here. Its fixes target the tracker losing the ball near lines, which DFL doesn't do. The same method scores 0.32 to 0.39 from game to game, which backs up the "under 0.04 can be luck" rule.
 
 ## Research ideas
 
