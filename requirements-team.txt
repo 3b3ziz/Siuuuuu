@@ -1,3 +1,7 @@
 # Our extras on top of requirements.txt and requirements-starter.txt (organisers' files).
-scikit-learn==1.9.1         # players-only possession model (prep/shape_model.py)
-opencv-python-headless      # clips for watching the video (experiments/ahmed/make_clips.py)
+# Pinned to the versions that produced our submission (byte-for-byte reproduction).
+numpy==2.5.4
+pandas==3.1.1
+scipy==1.18.1               # prep/ball_ownership.py smooths the ball track (savgol_filter)
+scikit-learn==1.9.1         # possession model (prep/shape_model.py, prep/ball_model.py)
+opencv-python-headless      # clips for watching the video (experiments/ahmed/make_clips.py), not needed for the submission

@@ -1,3 +1,14 @@
+> **Team Tiki Data's submission.** Approach, data used and limitations: [docs/technical.md](docs/technical.md).
+> To regenerate our file (data bundle in `data/`, the 7 Bundesliga games in `data/bundesliga/`):
+>
+> ```
+> uv venv --python 3.12 && source .venv/bin/activate
+> uv pip install -r requirements.txt -r requirements-starter.txt -r requirements-team.txt
+> python prep/run_real.py --name tiki_data    # -> evaluation/results/tiki_data.csv
+> ```
+>
+> Everything below is the organisers' original README.
+
 # More than a Hack 2027 — Phase 1: Ball Possession
 
 **Organised by [Metrica Sports](https://metrica-sports.com), [FC Barcelona](https://www.fcbarcelona.com)
