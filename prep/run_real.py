@@ -41,6 +41,7 @@ from stoppage import dead_from_players  # noqa: E402
 from sticky import players_by_team, runs, sticky_labels  # noqa: E402
 from ball_model import blend_touch, full_features, lock_clear, trained_model, viterbi  # noqa: E402
 from shape_model import p_home  # noqa: E402
+from dead_model import dead_from_model  # noqa: E402
 from team_fixes import merge_short, on_ball  # noqa: E402
 from stop_fixes import ball_speed, dead_before_restart, drop_short, kick_ends, kick_frames, still_then_kick  # noqa: E402
 from tags import (QUIET_AFTER_RESTART, dead_after_goals, dead_at_edges, dead_from_restarts,  # noqa: E402
@@ -70,6 +71,7 @@ def predict(ds, df, segments, pitch):
     dead = drop_short(dead_from_ball_out(df, segments, pitch=pitch) | speed | dead_before_restart(df, segments)
                       | still_then_kick(v, segments), segments)
     dead = kick_ends(dead, segments, kick_frames(v))
+    dead = dead_from_model(df, teams, pitch, segments, dead | restart_dead, restart_dead)
     dead = dead | restart_dead | dead_after_goals(df, goals) | dead_at_edges(df, segments, kickoffs)
     labels = sticky_labels(df, teams, segments, "closest", dead=dead, pitch=pitch)
     live = np.isin(restart_team(labels, rframes, restart_teams), ["H", "A"])

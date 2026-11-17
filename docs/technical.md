@@ -58,6 +58,12 @@ Each rule came from looking at the data or the video and asking what a stoppage 
   play. 2 s at first; 6 s added +0.007 on the bench (40/48 game-runs) and brought our match from
   137 to 106 stoppages, against ~110 in a typical match.
 
+- **A learned stoppage model on top** (`prep/dead_model.py`). Gradient boosting gives
+  P(stopped) per frame from the players' mean speed (several windows, before and after), how
+  often the ball is seen, ball speed, distance to a line, the rule stoppages above and the tags.
+  Trained on the 7 Bundesliga games with the ball hidden like ours. Dead where the 1 s average is
+  over 0.5. +0.030 on the bench (47/48), still +0.026 with all ball-visibility inputs removed.
+
 ### 3. The team (`H` / `A`)
 
 - **One model for P(home has it)** (`prep/ball_model.py`). It uses gradient boosting
@@ -109,10 +115,11 @@ Each rule came from looking at the data or the video and asking what a stoppage 
 | + ball-aware model and sequence decoder | 0.56 | 48/48 game-runs up |
 | + touch rule as a second opinion | 0.580 | 45/48 up |
 | + stoppages under 6 s dropped, not 2 s | 0.587 | 40/48 up |
-| + stoppages end at the restart kick, possessions under 0.8 s merged (**submitted**) | **0.601** | 48/48 up |
+| + stoppages end at the restart kick, possessions under 0.8 s merged | 0.601 | 48/48 up |
+| + learned stoppage model on top of the rules (**submitted**) | **0.631** | 47/48 up |
 
-On our match the submitted file has 44% of graded frames stopped (LaLiga is usually ~40-48%),
-106 stoppages (~110 is typical) and 329 possessions.
+On our match the submitted file has 38% of graded frames stopped (LaLiga is usually ~40-48%, so
+likely a little low), 104 stoppages (~110 is typical) and 351 possessions.
 
 ## Ideas from other teams
 
