@@ -1,4 +1,4 @@
-"""Our current best approach (row 16 in docs/notes.md) on the real match: data in, submission out.
+"""Our current best approach (row 18 in docs/notes.md) on the real match: data in, submission out.
 
     python prep/run_real.py                 # writes evaluation/results/<name>.csv, checks, scores
     python prep/run_real.py --name try2     # pick the file name
@@ -8,7 +8,7 @@ Steps:
      minutes: 199,319 frames.
   2. Stoppages: the ball leaves the pitch (prep/ball_out.py), the players slow down
      (prep/stoppage.py, silenced for 10 s after each tagged restart), or the ball reappears outside
-     after being missing (prep/stop_fixes.py); then stoppages under 2 s are dropped. Added from the
+     after being missing (prep/stop_fixes.py); then stoppages under 6 s are dropped, and each one ends at the restart kick. Added from the
      automatic tags (prep/tags.py): each set piece back to where play stopped, each goal until the
      kickoff, before each half's kickoff, and frames with under 10 players tracked.
      Team: a model trained on 7 Bundesliga games with the ball hidden like ours (prep/ball_model.py:
@@ -16,7 +16,7 @@ Steps:
      the team Atallah's touch rule names (prep/ball_ownership.py); within each live
      stretch the most likely H/A sequence wins, paying a fixed cost per switch (a team clearly on
      the ball for 2 s+ keeps it). The team taking a
-     tagged set piece gets the first bit after it; possessions under 1 s go to the team before
+     tagged set piece gets the first bit after it; possessions under 0.8 s go to the team before
      (prep/team_fixes.py). Live stretches: where sticky possession (prep/sticky.py) isn't D.
   3. X before kickoff, at halftime and after the final whistle (never graded).
   4. Run the official validator, then score against the public 5 minutes. That score is a
@@ -42,7 +42,7 @@ from sticky import players_by_team, runs, sticky_labels  # noqa: E402
 from ball_model import blend_touch, full_features, lock_clear, trained_model, viterbi  # noqa: E402
 from shape_model import p_home  # noqa: E402
 from team_fixes import merge_short, on_ball  # noqa: E402
-from stop_fixes import dead_before_restart, drop_short  # noqa: E402
+from stop_fixes import ball_speed, dead_before_restart, drop_short, kick_ends, kick_frames, still_then_kick  # noqa: E402
 from tags import (QUIET_AFTER_RESTART, dead_after_goals, dead_at_edges, dead_from_restarts,  # noqa: E402
                   restart_team, tag_inputs)
 
@@ -66,8 +66,10 @@ def predict(ds, df, segments, pitch):
     speed = dead_from_players(df, sum(teams, []), segments, pitch=pitch)
     for r in rframes:
         speed[r:r + QUIET_AFTER_RESTART] = False
-    dead = drop_short(dead_from_ball_out(df, segments, pitch=pitch) | speed | dead_before_restart(df, segments),
-                      segments)
+    v = ball_speed(df, pitch)
+    dead = drop_short(dead_from_ball_out(df, segments, pitch=pitch) | speed | dead_before_restart(df, segments)
+                      | still_then_kick(v, segments), segments)
+    dead = kick_ends(dead, segments, kick_frames(v))
     dead = dead | restart_dead | dead_after_goals(df, goals) | dead_at_edges(df, segments, kickoffs)
     labels = sticky_labels(df, teams, segments, "closest", dead=dead, pitch=pitch)
     live = np.isin(restart_team(labels, rframes, restart_teams), ["H", "A"])
@@ -96,7 +98,7 @@ def ballpark(labels, segments):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--name", default="ours_row16")
+    parser.add_argument("--name", default="tiki_data")
     args = parser.parse_args()
 
     segments = [(first, last + 1) for _, first, last in half_video_blocks(GAME)]

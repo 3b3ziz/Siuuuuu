@@ -50,8 +50,13 @@ Each rule came from looking at the data or the video and asking what a stoppage 
   after a restart the slowdown rule is switched off, so a slow build-up isn't called a stoppage.
   A goal is dead until the kickoff. So is the time before each half's kickoff, and any frame with
   under 10 players tracked (teams walking off, celebrations).
-- **Stoppages under 2 s are dropped.** Most were the ball flickering just outside a line in live
-  play.
+- **The restart kick.** Play restarts when a ball that was still or unseen for a second is
+  struck (over 4 m/s). Each rule-made stoppage ends at the first such kick from 3 s before to
+  10 s after where it ended, and a ball seen still for 2 s+ and then kicked was dead until the kick.
+- **Rule-made stoppages under 6 s are dropped.** Real ones last 10 s or more (a throw-in takes
+  10-16 s). The short ones were the ball flickering just outside a line, or a slow moment in live
+  play. 2 s at first; 6 s added +0.007 on the bench (40/48 game-runs) and brought our match from
+  137 to 106 stoppages, against ~110 in a typical match.
 
 ### 3. The team (`H` / `A`)
 
@@ -79,7 +84,7 @@ Each rule came from looking at the data or the video and asking what a stoppage 
   the same model with simple per-frame fix-ups was worth only a fifth as much. It stops
   flip-flopping without delaying real switches.
 - **After a tagged set piece**, the tagged team gets the first part of the possession.
-- **Possessions under 1 s go to the team before.** A touch without control isn't a change.
+- **Possessions under 0.8 s go to the team before.** A touch without control isn't a change.
 
 ### Why this and not something else
 
@@ -102,10 +107,20 @@ Each rule came from looking at the data or the video and asking what a stoppage 
 | + tighter "on the ball" test, short possessions merged | 0.47 | |
 | + players-only model inside ball gaps | 0.49–0.51 | |
 | + ball-aware model and sequence decoder | 0.56 | 48/48 game-runs up |
-| + touch rule as a second opinion (**submitted**) | **0.58** | 45/48 up |
+| + touch rule as a second opinion | 0.580 | 45/48 up |
+| + stoppages under 6 s dropped, not 2 s | 0.587 | 40/48 up |
+| + stoppages end at the restart kick, possessions under 0.8 s merged (**submitted**) | **0.601** | 48/48 up |
 
-On our match the submitted file has 46% of graded frames stopped (LaLiga is usually ~40-48%),
-137 stoppages (~110 is typical) and 340 possessions.
+On our match the submitted file has 44% of graded frames stopped (LaLiga is usually ~40-48%),
+106 stoppages (~110 is typical) and 329 possessions.
+
+## Ideas from other teams
+
+In the last hours we read other teams' public repos (READMEs and docs only, no code copied,
+no output files opened). Two ideas we built ourselves, tested on our bench and kept: longer minimum stoppages, and
+ending a stoppage at the restart kick. Ideas we had no time for: a learned live/stopped model,
+the referee's whistle in the video audio, and the broadcast feed showing replays during
+stoppages.
 
 ## Assets: used and dropped
 
@@ -137,23 +152,24 @@ No labels of any kind from the provided match were used.
   tackle), not to when the player "has it", since that's where possessions start on our practice
   keys. In the final pipeline it's a nudge to the model; the decoder decides where the switch
   lands.
-- **A touch without control isn't a switch.** Possessions under 1 s are merged into the team
+- **A touch without control isn't a switch.** Possessions under 0.8 s are merged into the team
   before. The touch rule also ignores quick deflections that bounce straight back, and it freezes
   its call in a duel (both teams within 1 m).
 - **Restarts.** A stoppage always ends a possession. After a tagged set piece the taking team
   has it. A goal is dead until the kickoff. A kickoff after a goal waits for the ball to
   reappear, which also covers a goal ruled out by VAR: play stays dead until the real restart, and
   the team on the ball then gets it.
-- **Stoppages shorter than 2 s don't exist**: those are the tracker, not the referee.
+- **Stoppages shorter than 6 s don't exist** (unless a set-piece tag says so): those are the
+  tracker or a slow moment, not the referee.
 
 ## Limitations, and what we'd fix with more time
 
 - **Stoppages are now the biggest loss.** On one bench run (normal hiding, seed 0), swapping in
-  the true stoppages lifts our score from 0.60 to 0.67, with every game up 0.06-0.09. We call ~137 where ~110 is normal, so some slow live play is still called
-  stopped. Throw-ins are short (10-16 s) and easy to miss. Next: a learned live/stopped model from
+  the true stoppages lifts our score from 0.60 to 0.67, with every game up 0.06-0.09 (measured before the
+  6 s change). Throw-ins are short (10-16 s) and easy to miss. Next: a learned live/stopped model from
   players only (as in Lang et al. 2022), trained on the Bundesliga alive flag.
 - **Our training keys aren't the organisers' keys.** DFL flips on every touch, including blocked
-  shots; the challenge says touches without control don't count. We hedge with the 1 s merge, but
+  shots; the challenge says touches without control don't count. We hedge with the 0.8 s merge, but
   the exact line the organisers drew is unknown to us.
 - **The fake ball-hiding is a model of our tracker, not the tracker.** We checked that a different
   hiding recipe gives the same gain, but the real match may still behave differently.

@@ -20,7 +20,7 @@ from sticky import runs
 
 GAP_FRAC = 0.5
 CONFIRM = 50     # the new team must show within 2 s of the ball coming back
-MIN_POSS_S = 1.0
+MIN_POSS_S = 0.8  # was 1.0 before row 18
 
 
 def gap_switch(labels, ball_seen, frac=GAP_FRAC, confirm=CONFIRM):
